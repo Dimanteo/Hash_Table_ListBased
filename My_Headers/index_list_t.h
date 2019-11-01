@@ -34,9 +34,10 @@ enum LIST_T_ERRORS {LIST_T_INDEX_OUT_OF_BOUNDS_ERROR = -42, LIST_T_MEMORY_ALLOCA
 const int FREE_POINTER = -1;
 const char ERR_STATE[] = "ERROR";
 const char OK_STATE[] = "ok";
-const char DEFAULT_LOG_NAME[] = "../ListLog.txt";
-const char DOT_LOG_NAME[] = "../DotDumps/dot_ListLog.dot";
+char LIST_DEFAULT_LOG_NAME[] = "../ListLog.txt";
+char DOT_LOG_NAME[] = "../DotDumps/dot_ListLog.dot";
 int DOT_FILE_COUNTER = 1;
+const size_t LIST_DUMP_MSG_LENGTH = 100;
 const size_t DOT_QUERY_SIZE = 30;
 const size_t DEFAULT_LIST_SIZE = 10;
 
@@ -133,7 +134,7 @@ void list_init(List_t *list, size_t size, const char log_filename[]) {
 }
 
 void list_init(List_t *list, size_t size) {
-    list_init(list, size, DEFAULT_LOG_NAME);
+    list_init(list, size, LIST_DEFAULT_LOG_NAME);
 }
 
 void list_init(List_t *list, const char log_filename[]) {
@@ -141,7 +142,7 @@ void list_init(List_t *list, const char log_filename[]) {
 }
 
 void list_init(List_t *list) {
-    list_init(list, DEFAULT_LIST_SIZE, DEFAULT_LOG_NAME);
+    list_init(list, DEFAULT_LIST_SIZE, LIST_DEFAULT_LOG_NAME);
 }
 
 void list_destruct(List_t *list) {
@@ -162,7 +163,7 @@ void list_destruct(List_t *list) {
 bool data_check(List_t* list, const char file[], const char function[], int line) {
     int i = list->head;
     for (int cnt = 0; cnt < list->size; ++cnt) {
-        char message[100] = "";
+        char message[LIST_DUMP_MSG_LENGTH] = "";
         if (cnt == 0) {
             LIST_NODE_ASSERT(list->data[i].prev == 0, "Stores. First element doesn't point to 0. ")
         } else {
@@ -198,7 +199,7 @@ bool free_check(List_t* list, const char file[], const char function[], int line
 bool list_verify(List_t *list, const char file[], const char function[], int line) {
 #ifndef NDEBUG
     if(list == nullptr) {
-        fprintf(stderr, "ERROR. Null pointer to list.");
+        fprintf(stderr, "ERROR. Null pointer to list. %s; %s (%d)\n", file, function, line);
         assert(list);
         return false;
     }

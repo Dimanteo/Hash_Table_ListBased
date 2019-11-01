@@ -1,5 +1,17 @@
 #include <iostream>
 #include "My_Headers\index_list_t.h"
+#define VERIFY_CONTEXT __FILE__, __PRETTY_FUNCTION__, __LINE__
+
+#define HASH_TABLE_ASSERT(condition, message) \
+if (!(condition)) {\
+    htable_dump(table, ERR_STATE, message, filename, function, line);\
+    assert(condition);\
+    return false;\
+}
+
+char HASH_TABLE_LOG_NAME[] = "HTable_log.txt";
+const size_t HASHT_DUMP_MSG_LENGTH = 100;
+const char PARENT_CALL_STATE[] = "Parent call";
 
 struct Hash_Table_t {
     size_t size;
@@ -17,8 +29,11 @@ unsigned int htable_embedded_hash(char* buffer, size_t length);
 
 int htable_push(Hash_Table_t* table, element_t elem);
 
-int main() {
+bool htable_verify(Hash_Table_t* table, const char filename[], const char function[], int line);
 
+void htable_dump(Hash_Table_t* table, const char state[], const char message[], const char filename[], const char function[], int line);
+
+int main() {
     return 0;
 }
 
@@ -86,5 +101,53 @@ unsigned int htable_embedded_hash(char* buffer, size_t length) {
     hash ^= hash >> 15;
 
     return hash;
+}
+
+bool htable_verify(Hash_Table_t *table, const char *filename, const char *function, int line) {
+#ifndef NDEBUG
+    if (table == nullptr) {
+        FILE* log = fopen(HASH_TABLE_LOG_NAME, "ab");
+        fprintf(log, "ERROR. NULL pointer to Hash_Table %s; %s (%d).\n", filename, function, line);
+        assert(table);
+        return false;
+    }
+    HASH_TABLE_ASSERT(table->hash != nullptr, "Hash function not specified.")
+    HASH_TABLE_ASSERT(table->size > 0, "Incorrect table size")
+
+    for (int i = 0; i < table->size; ++i) {
+        bool list_ok = list_verify(&table->index[i], filename, function, line);
+        char msg[HASHT_DUMP_MSG_LENGTH] = {};
+        sprintf(msg, "List in index[%d] error", i);
+        if (!list_ok) {
+            htable_dump(table, ERR_STATE, msg, filename, function, line);
+            return false;
+        }
+    }
+
+#ifdef OK_DUMP
+    htable_dump(table, OK_STATE, "It's ok ^..^", filename, function, line);
+#endif
+#endif
+    return true;
+}
+
+void htable_dump(Hash_Table_t* table, const char *state, const char *message, const char *filename, const char *function, int line) {
+    FILE* log = fopen(HASH_TABLE_LOG_NAME, "ab");
+
+    time_t now = time(nullptr);
+    fprintf(log, "\nlog from %s"
+                 "Hash_Table Dump(%s) from %s; %s (%d)\n"
+                 "Hash_Table_t [%p] (%s)\n"
+                 "{\n"
+                 "\tsize = %d\n"
+                 "\thash = %p\n"
+                 "\tindex = %p\n"
+                 "\t{<index_dump>\n", ctime(&now), message, filename, function, line, table, state, table->size, table->hash, table->index);
+    for (int i = 0; i < table->size; ++i) {
+        char msg[HASHT_DUMP_MSG_LENGTH] = {};
+        sprintf(msg, "index[%d]", i);
+        list_dump(&table->index[i], PARENT_CALL_STATE, msg, filename, function, line);
+    }
+    fclose(log);
 }
 

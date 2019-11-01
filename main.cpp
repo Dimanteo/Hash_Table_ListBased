@@ -1,4 +1,5 @@
 #include <iostream>
+#define OK_DUMP
 #include "My_Headers\index_list_t.h"
 #define VERIFY_CONTEXT __FILE__, __PRETTY_FUNCTION__, __LINE__
 
@@ -9,7 +10,7 @@ if (!(condition)) {\
     return false;\
 }
 
-char HASH_TABLE_LOG_NAME[] = "HTable_log.txt";
+char HASH_TABLE_LOG_NAME[] = "../HTable_log.txt";
 const size_t HASHT_DUMP_MSG_LENGTH = 100;
 const char PARENT_CALL_STATE[] = "Parent call";
 
@@ -27,13 +28,21 @@ void htable_destruct(Hash_Table_t* table);
 
 unsigned int htable_embedded_hash(char* buffer, size_t length);
 
-int htable_push(Hash_Table_t* table, element_t elem);
+unsigned int htable_add(Hash_Table_t* table, element_t elem);
 
 bool htable_verify(Hash_Table_t* table, const char filename[], const char function[], int line);
 
 void htable_dump(Hash_Table_t* table, const char state[], const char message[], const char filename[], const char function[], int line);
 
 int main() {
+    FILE* file = fopen(HASH_TABLE_LOG_NAME, "wb");
+    fclose(file);
+    file = fopen(LIST_DEFAULT_LOG_NAME, "wb");
+    fclose(file);
+
+    Hash_Table_t hashTable = {};
+    htable_init(&hashTable, 5);
+    htable_destruct(&hashTable);
     return 0;
 }
 
@@ -42,8 +51,12 @@ void htable_init(Hash_Table_t *table, size_t size, unsigned int (*hash_function)
     table->hash = hash_function;
     table->index = (List_t*)calloc(size, sizeof(List_t));
     for (int i = 0; i < size; ++i) {
-        list_init(&table->index[i], (size_t)0);
+        List_t list = {};
+        table->index[i] = list;
+        list_init(&table->index[i], (size_t)1, HASH_TABLE_LOG_NAME);
     }
+
+    htable_verify(table, VERIFY_CONTEXT);
 }
 
 void htable_init(Hash_Table_t *table, size_t size) {
@@ -52,6 +65,8 @@ void htable_init(Hash_Table_t *table, size_t size) {
 
 
 void htable_destruct(Hash_Table_t *table) {
+    htable_verify(table, VERIFY_CONTEXT);
+
     for (int i = 0; i < table->size; ++i) {
         list_destruct(&table->index[i]);
     }
@@ -142,12 +157,23 @@ void htable_dump(Hash_Table_t* table, const char *state, const char *message, co
                  "\tsize = %d\n"
                  "\thash = %p\n"
                  "\tindex = %p\n"
-                 "\t{<index_dump>\n", ctime(&now), message, filename, function, line, table, state, table->size, table->hash, table->index);
+                 "\t{<index_dump>\n"
+                 , ctime(&now), message, filename, function, line, table, state, table->size, table->hash, table->index);
+    fclose(log);
+
     for (int i = 0; i < table->size; ++i) {
         char msg[HASHT_DUMP_MSG_LENGTH] = {};
         sprintf(msg, "index[%d]", i);
         list_dump(&table->index[i], PARENT_CALL_STATE, msg, filename, function, line);
     }
+
+    log = fopen(HASH_TABLE_LOG_NAME, "ab");
+    fprintf(log, "\t</index_dump>}\n}");
     fclose(log);
+}
+
+unsigned int htable_add(Hash_Table_t *table, element_t elem) {
+
+    return 0;
 }
 

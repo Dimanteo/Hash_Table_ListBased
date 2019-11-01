@@ -35,7 +35,7 @@ const int FREE_POINTER = -1;
 const char ERR_STATE[] = "ERROR";
 const char OK_STATE[] = "ok";
 char LIST_DEFAULT_LOG_NAME[] = "../ListLog.txt";
-char DOT_LOG_NAME[] = "../DotDumps/dot_ListLog.dot";
+char DOT_LOG_NAME[] = "../dot_ListLog.dot";
 int DOT_FILE_COUNTER = 1;
 const size_t LIST_DUMP_MSG_LENGTH = 100;
 const size_t DOT_QUERY_SIZE = 30;
@@ -117,6 +117,8 @@ void list_init(List_t *list, size_t size, const char log_filename[]) {
     assert(list);
     assert(size > 0);
 
+    list->canary1 = CANARY_VALUE;
+    list->canary2 = CANARY_VALUE;
     list->max_size = size;
     list->size = 0;
     list->data = (List_Node*)calloc(list->max_size + 1, sizeof(list->data[0]));
@@ -250,7 +252,7 @@ void list_dump(List_t *list, const char *state, const char *message, const char 
     fclose(log);
     data_dump(list);
     log = fopen(list->log_name, "ab");
-    fprintf(log, "\t\t}\n\t}\n");
+    fprintf(log, "\n\t\t}\n\t}\n");
     fclose(log);
 }
 
@@ -271,9 +273,9 @@ void data_dump(List_t *list) {
     for (; i != 0; i = list->data[i].prev) {
         fprintf(log, "[%d] <- ", i);
     }
+    fprintf(log, "[%d]\n", i);
 #ifdef GRAPH_DUMPS
-    fprintf(log, "[%d]\n"
-                 "%d_ListDot.png contains dot representation.\n", i, DOT_FILE_COUNTER);
+    fprintf(log, "%d_ListDot.png contains dot representation.\n", DOT_FILE_COUNTER);
     graphviz_dump(list);
 #endif
     fclose(log);
@@ -331,8 +333,8 @@ void graphviz_dump(List_t* list) {
     fprintf(dotlog, "\n}");
     fclose(dotlog);
 
-    char sys_query[sizeof(DOT_LOG_NAME) + sizeof(DOT_FILE_COUNTER) + DOT_QUERY_SIZE];
-    sprintf(sys_query, "dot -Tpng %s -o ../DotDumps/%d_ListDot.png", DOT_LOG_NAME, DOT_FILE_COUNTER);
+    char sys_query[sizeof(DOT_LOG_NAME) + sizeof(DOT_FILE_COUNTER) + DOT_QUERY_SIZE] = "";
+    sprintf(sys_query, "dot -Tpng %s -o %d_ListDot.png", DOT_LOG_NAME, DOT_FILE_COUNTER);
     system(sys_query);
     DOT_FILE_COUNTER++;
 }

@@ -34,10 +34,10 @@ enum LIST_T_ERRORS {LIST_T_INDEX_OUT_OF_BOUNDS_ERROR = -42, LIST_T_MEMORY_ALLOCA
 const int FREE_POINTER = -1;
 const char ERR_STATE[] = "ERROR";
 const char OK_STATE[] = "ok";
-char LIST_DEFAULT_LOG_NAME[] = "../ListLog.txt";
-char DOT_LOG_NAME[] = "../dot_ListLog.dot";
+char DEFAULT_LOG_NAME[] = "ListLog.txt";
+char DOT_LOG_NAME[] = "dot_ListLog.dot";
+char DOT_OUT_NAME[] = "ListDot.png";
 int DOT_FILE_COUNTER = 1;
-const size_t LIST_DUMP_MSG_LENGTH = 100;
 const size_t DOT_QUERY_SIZE = 30;
 const size_t DEFAULT_LIST_SIZE = 10;
 
@@ -117,8 +117,6 @@ void list_init(List_t *list, size_t size, const char log_filename[]) {
     assert(list);
     assert(size > 0);
 
-    list->canary1 = CANARY_VALUE;
-    list->canary2 = CANARY_VALUE;
     list->max_size = size;
     list->size = 0;
     list->data = (List_Node*)calloc(list->max_size + 1, sizeof(list->data[0]));
@@ -136,7 +134,7 @@ void list_init(List_t *list, size_t size, const char log_filename[]) {
 }
 
 void list_init(List_t *list, size_t size) {
-    list_init(list, size, LIST_DEFAULT_LOG_NAME);
+    list_init(list, size, DEFAULT_LOG_NAME);
 }
 
 void list_init(List_t *list, const char log_filename[]) {
@@ -144,7 +142,7 @@ void list_init(List_t *list, const char log_filename[]) {
 }
 
 void list_init(List_t *list) {
-    list_init(list, DEFAULT_LIST_SIZE, LIST_DEFAULT_LOG_NAME);
+    list_init(list, DEFAULT_LIST_SIZE, DEFAULT_LOG_NAME);
 }
 
 void list_destruct(List_t *list) {
@@ -165,7 +163,7 @@ void list_destruct(List_t *list) {
 bool data_check(List_t* list, const char file[], const char function[], int line) {
     int i = list->head;
     for (int cnt = 0; cnt < list->size; ++cnt) {
-        char message[LIST_DUMP_MSG_LENGTH] = "";
+        char message[100] = "";
         if (cnt == 0) {
             LIST_NODE_ASSERT(list->data[i].prev == 0, "Stores. First element doesn't point to 0. ")
         } else {
@@ -201,7 +199,7 @@ bool free_check(List_t* list, const char file[], const char function[], int line
 bool list_verify(List_t *list, const char file[], const char function[], int line) {
 #ifndef NDEBUG
     if(list == nullptr) {
-        fprintf(stderr, "ERROR. Null pointer to list. %s; %s (%d)\n", file, function, line);
+        fprintf(stderr, "ERROR. Null pointer to list.");
         assert(list);
         return false;
     }
@@ -252,7 +250,7 @@ void list_dump(List_t *list, const char *state, const char *message, const char 
     fclose(log);
     data_dump(list);
     log = fopen(list->log_name, "ab");
-    fprintf(log, "\n\t\t}\n\t}\n");
+    fprintf(log, "\t\t}\n\t}\n");
     fclose(log);
 }
 
@@ -275,7 +273,7 @@ void data_dump(List_t *list) {
     }
     fprintf(log, "[%d]\n", i);
 #ifdef GRAPH_DUMPS
-    fprintf(log, "%d_ListDot.png contains dot representation.\n", DOT_FILE_COUNTER);
+    fprintf(log, "%d%s contains dot representation.\n", DOT_FILE_COUNTER, DOT_OUT_NAME);
     graphviz_dump(list);
 #endif
     fclose(log);
@@ -288,29 +286,29 @@ void graphviz_dump(List_t* list) {
                     "\trankdir = LR;\n"
                     "\t");
 
-    fprintf(dotlog, "%d [shape = record, style = filled, color = \"#ff6e84\", label = \" Forbidden_zone %d | value\\n%d | {<n%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
-            0, 0, list->data[0].value, 0, list->data[0].prev, 0, list->data[0].next);
+    fprintf(dotlog, "%d [shape = record, style = filled, color = \"#ff6e84\", label = \" Forbidden_zone %p | value\\n" LIST_ELEMENT_PRINT "| {<p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
+            0, list, list->data[0].value, 0, list->data[0].prev, 0, list->data[0].next);
     for (int i = 1; i <= list->max_size; ++i) {
 
         if (i == list->head && i == list->tail) {
-            fprintf(dotlog, "%d [shape = record, color = \"#4afa8a\", label = \"Head and Tail %d | value\\n%d | { <p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
+            fprintf(dotlog, "%d [shape = record, color = \"#4afa8a\", label = \"Head and Tail %d | value\\n" LIST_ELEMENT_PRINT " | { <p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
                     i, i, list->data[i].value, i, list->data[i].prev, i, list->data[i].next);
             continue;
         }
 
         if (i == list->head) {
-            fprintf(dotlog, "%d [shape = record, color = \"#6e9aff\", label = \"Head %d | value\\n%d | {<p%d> prev\\n %d | <n%d> next\\n %d } \"];\n\t",
+            fprintf(dotlog, "%d [shape = record, color = \"#6e9aff\", label = \"Head %d | value\\n" LIST_ELEMENT_PRINT " | {<p%d> prev\\n %d | <n%d> next\\n %d } \"];\n\t",
                     i, i, list->data[i].value, i, list->data[i].prev, i, list->data[i].next);
             continue;
         }
 
         if (i == list->tail) {
-            fprintf(dotlog, "%d [shape = record, color = \"#ebf527\", label = \"Tail %d | value\\n%d | {<p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
+            fprintf(dotlog, "%d [shape = record, color = \"#ebf527\", label = \"Tail %d | value\\n" LIST_ELEMENT_PRINT " | {<p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
                     i, i, list->data[i].value, i, list->data[i].prev, i, list->data[i].next);
             continue;
         }
 
-        fprintf(dotlog, "%d [shape = record, label = \"index %d | value\\n%d | {<p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
+        fprintf(dotlog, "%d [shape = record, label = \"index %d | value\\n" LIST_ELEMENT_PRINT " | {<p%d> prev\\n %d | <n%d> next\\n %d} \"];\n\t",
                 i, i, list->data[i].value, i, list->data[i].prev, i, list->data[i].next);
     }
 
@@ -333,8 +331,8 @@ void graphviz_dump(List_t* list) {
     fprintf(dotlog, "\n}");
     fclose(dotlog);
 
-    char sys_query[sizeof(DOT_LOG_NAME) + sizeof(DOT_FILE_COUNTER) + DOT_QUERY_SIZE] = "";
-    sprintf(sys_query, "dot -Tpng %s -o %d_ListDot.png", DOT_LOG_NAME, DOT_FILE_COUNTER);
+    char sys_query[sizeof(DOT_LOG_NAME) + sizeof(DOT_FILE_COUNTER) + sizeof(DOT_OUT_NAME) + DOT_QUERY_SIZE];
+    sprintf(sys_query, "dot -Tpng %s -o %d%s", DOT_LOG_NAME, DOT_FILE_COUNTER, DOT_OUT_NAME);
     system(sys_query);
     DOT_FILE_COUNTER++;
 }

@@ -1,7 +1,15 @@
 #include <iostream>
 #define OK_DUMP
+
+typedef int value_t;
+const value_t value_POISON = -1337;
+typedef int key_t;
+struct VK_Pair {
+    value_t value;
+    key_t key;
+};
+//Лист содержит пары ключ значение. Это нужно для поиска элемента по ключу в случае коллизии
 #include "My_Headers\index_list_t.h"
-#define VERIFY_CONTEXT __FILE__, __PRETTY_FUNCTION__, __LINE__
 
 #define HASH_TABLE_ASSERT(condition, message) \
 if (!(condition)) {\
@@ -14,13 +22,14 @@ char HASH_TABLE_LOG_NAME[] = "../HTable_log.txt";
 const size_t HASHT_DUMP_MSG_LENGTH = 100;
 const char PARENT_CALL_STATE[] = "Parent call";
 
+
 struct Hash_Table_t {
     size_t size;
     List_t* index;
     unsigned int (*hash)(char*, size_t);
 };
 
-void htable_init(Hash_Table_t* table, size_t  size, unsigned int (*hash)(char*, size_t));
+void htable_init(Hash_Table_t* table, size_t size, unsigned int (*hash)(char*, size_t));
 
 void htable_init(Hash_Table_t* table, size_t size);
 
@@ -28,20 +37,25 @@ void htable_destruct(Hash_Table_t* table);
 
 unsigned int htable_embedded_hash(char* buffer, size_t length);
 
-unsigned int htable_add(Hash_Table_t* table, element_t elem);
+unsigned int htable_add(Hash_Table_t *table, key_t key, value_t value);
+
+value_t htable_get(Hash_Table_t* table, key_t key, bool* valid = nullptr);
 
 bool htable_verify(Hash_Table_t* table, const char filename[], const char function[], int line);
 
 void htable_dump(Hash_Table_t* table, const char state[], const char message[], const char filename[], const char function[], int line);
 
+
+
+
 int main() {
     FILE* file = fopen(HASH_TABLE_LOG_NAME, "wb");
     fclose(file);
-    file = fopen(LIST_DEFAULT_LOG_NAME, "wb");
-    fclose(file);
-
     Hash_Table_t hashTable = {};
     htable_init(&hashTable, 5);
+    unsigned int a = htable_add(&hashTable, 100, 100);
+    unsigned int b = htable_add(&hashTable, 200, 200);
+    printf( LIST_ELEMENT_PRINT , htable_get(&hashTable, 100));
     htable_destruct(&hashTable);
     return 0;
 }
@@ -132,7 +146,7 @@ bool htable_verify(Hash_Table_t *table, const char *filename, const char *functi
     for (int i = 0; i < table->size; ++i) {
         bool list_ok = list_verify(&table->index[i], filename, function, line);
         char msg[HASHT_DUMP_MSG_LENGTH] = {};
-        sprintf(msg, "List in index[%d] error", i);
+        sprintf(msg, "List in index[%d] ERROR", i);
         if (!list_ok) {
             htable_dump(table, ERR_STATE, msg, filename, function, line);
             return false;
@@ -172,8 +186,34 @@ void htable_dump(Hash_Table_t* table, const char *state, const char *message, co
     fclose(log);
 }
 
-unsigned int htable_add(Hash_Table_t *table, element_t elem) {
+unsigned int htable_add(Hash_Table_t *table, key_t key, value_t value) {
+    htable_verify(table, VERIFY_CONTEXT);
 
-    return 0;
+    VK_Pair elem = {value, key};
+    unsigned int hash = table->hash((char*)&key, sizeof(key));
+    list_push_back(&table->index[hash % table->size], elem);
+
+    htable_verify(table, VERIFY_CONTEXT);
+    return hash;
+}
+
+value_t htable_get(Hash_Table_t *table, key_t key, bool* valid /*= nullptr*/) {
+    htable_verify(table, VERIFY_CONTEXT);
+
+    unsigned int adress = table->hash((char*)&key, sizeof(key)) % table->size;
+    List_t* list = &table->index[adress];
+    for (int i = list->head; i != 0; i = list->data[i].next) {
+        if (list->data[i].value.key == key) {
+            if (valid != nullptr){
+                *valid = true;
+            }
+            return list->data[i].value.value;
+        }
+    }
+    if (valid != nullptr){
+        *valid = false;
+    }
+    htable_verify(table, VERIFY_CONTEXT);
+    return value_POISON;
 }
 

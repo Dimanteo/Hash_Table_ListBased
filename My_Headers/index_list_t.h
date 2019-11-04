@@ -24,12 +24,12 @@ if (!(condition)) {\
     return false;\
 }
 
-typedef int element_t;
+typedef VK_Pair element_t;
 #define LIST_ELEMENT_PRINT "%d"
 typedef unsigned int canary_t;
 #define CANARY_PRINT "%#X"
 const canary_t CANARY_VALUE = 0xBEDA;
-const element_t POISON = -1337;
+const element_t POISON = {-1337, -1337};
 enum LIST_T_ERRORS {LIST_T_INDEX_OUT_OF_BOUNDS_ERROR = -42, LIST_T_MEMORY_ALLOCATION_ERROR = -69, LIST_T_UNDERFLOW = -137};
 const int FREE_POINTER = -1;
 const char ERR_STATE[] = "ERROR";
@@ -381,7 +381,7 @@ element_t list_get_val(List_t *list, int index, int* error_code /*= nullptr*/) {
         if(error_code != nullptr) {
             *error_code = LIST_T_INDEX_OUT_OF_BOUNDS_ERROR;
         }
-        return 0;
+        return POISON;
     }
 
     if (error_code != nullptr) {
@@ -455,7 +455,7 @@ element_t list_pop_back(List_t *list, int* error_code /*= nullptr*/) {
     }
 
     int tail = list->tail;
-    int value = list->data[tail].value;
+    element_t value = list->data[tail].value;
     list->data[list->data[tail].prev].next = 0;
     list->tail = list->data[tail].prev;
     if(list->size == 1) {
@@ -515,7 +515,7 @@ element_t list_pop_front(List_t *list, int *error_code) {
         return POISON;
     }
 
-    int value = list->data[list->head].value;
+    element_t value = list->data[list->head].value;
     int head = list->head;
     list->data[list->data[head].next].prev = 0;
     list->head = list->data[head].next;
@@ -628,7 +628,7 @@ element_t list_remove(List_t *list, int index, int* error_code /*= nullptr*/) {
         return POISON;
     }
 
-    int ret_val = list->data[index].value;
+    element_t ret_val = list->data[index].value;
 
     if(list->head == index) {
         list->head = list->data[index].next;

@@ -1,16 +1,32 @@
+///@file
+/**
+ * type of Hash_Table content.
+ */
 typedef int value_t;
 const value_t value_POISON = -1337;
+
+/**
+ * Type of Hash_Table key
+ */
 typedef int key_t;
+
+/**
+ * Hash_Table contains List_t arrays of KV_Pair. This structure is key and value pair.
+ */
 
 struct KV_Pair {
     key_t key;
     value_t value;
 };
 
-//Лист содержит пары ключ значение. Это нужно для поиска элемента по ключу в случае коллизии
+//Лист содержит пары ключ значение. Это нужно для поиска элемента по ключу в случае коллизии.
 
 #include "My_Headers\index_list_t.h"
 #define OK_DUMP
+
+/**
+ * Check condition and if it's not true generate htable_dump with messageas parameter.
+ */
 #define HASH_TABLE_ASSERT(condition, message) \
 if (!(condition)) {\
     htable_dump(table, ERR_STATE, message, filename, function, line);\
@@ -22,30 +38,100 @@ char HASH_TABLE_LOG_NAME[] = "../HTable_log.txt";
 const size_t HASHT_DUMP_MSG_LENGTH = 100;
 const char PARENT_CALL_STATE[] = "Parent call";
 
-
+/**
+ * @param size size of Hash_Table array.
+ * @param index array of lists..
+ * @param hash pointer to hash function, which used to convert key.
+ */
 struct Hash_Table_t {
     size_t size;
     List_t* index;
     unsigned int (*hash)(char*, size_t);
 };
 
+/**
+ * Hash_Table constructor.
+ * @param table Hash_Table that will be initialized.
+ * @param size Size of Hash_Table array.
+ * @param hash Pointer to hash function, which used to convert key. If not initialized will use function htable_embedded_hash.
+ */
 void htable_init(Hash_Table_t* table, size_t size, unsigned int (*hash)(char*, size_t));
 
 void htable_init(Hash_Table_t* table, size_t size);
 
+/**
+ * Hash_Table destructor.
+ * @param table
+ */
+
 void htable_destruct(Hash_Table_t* table);
+
+/**
+ * Default Hash_Table hash function. Used if another not specified in htable_init().
+ * @param buffer Pointer to memory part, that will be hashed.
+ * @param length Size of memory part in bytes.
+ * @return
+ */
 
 unsigned int htable_embedded_hash(char* buffer, size_t length);
 
+/**
+ * Put pair {key, value} in table.
+ * @param table Pointer to Hash_Table where pair will be inserted.
+ * @param key Key element in pair. It will be used to calculate hash.
+ * @param value Value element in pair. It will be associated with key.
+ */
+
 void htable_add(Hash_Table_t *table, key_t key, value_t value);
+
+/**
+ * Gets value that associated with key from table. If this key not exist in table, returns value_POISON and set valid  to false.
+ * @param table Pointer to Hash_Table where to search.
+ * @param key Key of value that need to be extracted.
+ * @param valid Set flag true if returned value is correct. Set flag false if value with that key not found.
+ * @return Value that associated with key.
+ */
 
 value_t htable_get(Hash_Table_t* table, key_t key, bool* valid = nullptr);
 
+/**
+ * Verifyer for Hash_Table. Can be disabled by define NDEBUG. If define OK_DUMP generate dumps even if there no errors.
+ * @param table Verifyer target.
+ * @param filename File where from verifier was called.
+ * @param function Function where from verifier was called.
+ * @param line Line where from verifier was called.
+ * @return TRUE if table is correct. FALSE if table contains error.
+ */
+
 bool htable_verify(Hash_Table_t* table, const char filename[], const char function[], int line);
+
+/**
+ * Generate dump for Hash_Table. Prints result in file with name HASH_TABLE_LOG_NAME.
+ * @param table Dump target.
+ * @param state Table state: error, ok or parent_call.
+ * @param message Text will be printed in dump. Describe error.
+ * @param filename File where from dump was called.
+ * @param function Function where from verifier was called.
+ * @param line Line where from verifier was called.
+ */
 
 void htable_dump(Hash_Table_t* table, const char state[], const char message[], const char filename[], const char function[], int line);
 
+/**
+ * Pop (delete and return) value associated with key from table.
+ * @param table Table to operate with.
+ * @param key Key to search for.
+ * @param valid Set flag true if returned value is correct. Set flag false if pair with such key do not exist in this table.
+ * @return removed value, associated with key.
+ */
+
 value_t htable_remove(Hash_Table_t* table, key_t key, bool* valid = nullptr);
+
+/**
+ * Returns pointer to list, where key should be placed.
+ * @param table Hash_Table where to search for list.
+ * @return Pointer to list, that should contain key.
+ */
 
 List_t* htable_getList(Hash_Table_t* table, key_t key);
 
@@ -56,14 +142,8 @@ int main() {
     fclose(file);
     Hash_Table_t hashTable = {};
     htable_init(&hashTable, 1);
-    htable_add(&hashTable, 100, 111);
-    printf( LIST_ELEMENT_PRINT"\n", 100, htable_get(&hashTable, 100));
-    htable_add(&hashTable, 200, 999);
-    printf( LIST_ELEMENT_PRINT"\n", 200,  htable_get(&hashTable, 200));
-    bool valid = false;
-    int r = htable_remove(&hashTable, 300, &valid);
-    printf("%d", valid);
-    htable_destruct(&hashTable);
+    //Place fo tests
+
     return 0;
 }
 

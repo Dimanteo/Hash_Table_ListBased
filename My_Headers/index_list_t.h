@@ -24,8 +24,8 @@ if (!(condition)) {\
     return false;\
 }
 
-typedef VK_Pair element_t;
-#define LIST_ELEMENT_PRINT "%d"
+typedef KV_Pair element_t;
+#define LIST_ELEMENT_PRINT "{key: %d| val %d}"
 typedef unsigned int canary_t;
 #define CANARY_PRINT "%#X"
 const canary_t CANARY_VALUE = 0xBEDA;

@@ -1,16 +1,16 @@
-#include <iostream>
-#define OK_DUMP
-
 typedef int value_t;
 const value_t value_POISON = -1337;
 typedef int key_t;
-struct VK_Pair {
-    value_t value;
-    key_t key;
-};
-//Лист содержит пары ключ значение. Это нужно для поиска элемента по ключу в случае коллизии
-#include "My_Headers\index_list_t.h"
 
+struct KV_Pair {
+    key_t key;
+    value_t value;
+};
+
+//Лист содержит пары ключ значение. Это нужно для поиска элемента по ключу в случае коллизии
+
+#include "My_Headers\index_list_t.h"
+#define OK_DUMP
 #define HASH_TABLE_ASSERT(condition, message) \
 if (!(condition)) {\
     htable_dump(table, ERR_STATE, message, filename, function, line);\
@@ -37,7 +37,7 @@ void htable_destruct(Hash_Table_t* table);
 
 unsigned int htable_embedded_hash(char* buffer, size_t length);
 
-unsigned int htable_add(Hash_Table_t *table, key_t key, value_t value);
+void htable_add(Hash_Table_t *table, key_t key, value_t value);
 
 value_t htable_get(Hash_Table_t* table, key_t key, bool* valid = nullptr);
 
@@ -45,6 +45,9 @@ bool htable_verify(Hash_Table_t* table, const char filename[], const char functi
 
 void htable_dump(Hash_Table_t* table, const char state[], const char message[], const char filename[], const char function[], int line);
 
+value_t htable_remove(Hash_Table_t* table, key_t key, bool* valid = nullptr);
+
+List_t* htable_getList(Hash_Table_t* table, key_t key);
 
 
 
@@ -52,13 +55,19 @@ int main() {
     FILE* file = fopen(HASH_TABLE_LOG_NAME, "wb");
     fclose(file);
     Hash_Table_t hashTable = {};
-    htable_init(&hashTable, 5);
-    unsigned int a = htable_add(&hashTable, 100, 100);
-    unsigned int b = htable_add(&hashTable, 200, 200);
-    printf( LIST_ELEMENT_PRINT , htable_get(&hashTable, 100));
+    htable_init(&hashTable, 1);
+    htable_add(&hashTable, 100, 111);
+    printf( LIST_ELEMENT_PRINT"\n", 100, htable_get(&hashTable, 100));
+    htable_add(&hashTable, 200, 999);
+    printf( LIST_ELEMENT_PRINT"\n", 200,  htable_get(&hashTable, 200));
+    bool valid = false;
+    int r = htable_remove(&hashTable, 300, &valid);
+    printf("%d", valid);
     htable_destruct(&hashTable);
     return 0;
 }
+
+
 
 void htable_init(Hash_Table_t *table, size_t size, unsigned int (*hash_function)(char *, size_t)) {
     table->size = size;
@@ -186,22 +195,34 @@ void htable_dump(Hash_Table_t* table, const char *state, const char *message, co
     fclose(log);
 }
 
-unsigned int htable_add(Hash_Table_t *table, key_t key, value_t value) {
+List_t* htable_getList(Hash_Table_t* table, key_t key) {
+    unsigned int hash = table->hash((char*)&key, sizeof(key)) % table->size;
+    return &table->index[hash];
+}
+
+void htable_add(Hash_Table_t *table, key_t key, value_t value) {
     htable_verify(table, VERIFY_CONTEXT);
 
-    VK_Pair elem = {value, key};
-    unsigned int hash = table->hash((char*)&key, sizeof(key));
-    list_push_back(&table->index[hash % table->size], elem);
+    List_t* list = htable_getList(table, key);
+    for (int i = list->head; i != 0 ; i = list->data[i].next) {
+        if (key == list->data[i].value.key) {
+            list->data[i].value.value = value;
+            htable_verify(table, VERIFY_CONTEXT);
+            return;
+        }
+    }
+    KV_Pair elem = {};
+    elem.value = value;
+    elem.key = key;
+    list_push_back(list, elem);
 
     htable_verify(table, VERIFY_CONTEXT);
-    return hash;
 }
 
 value_t htable_get(Hash_Table_t *table, key_t key, bool* valid /*= nullptr*/) {
     htable_verify(table, VERIFY_CONTEXT);
 
-    unsigned int adress = table->hash((char*)&key, sizeof(key)) % table->size;
-    List_t* list = &table->index[adress];
+    List_t* list = htable_getList(table, key);
     for (int i = list->head; i != 0; i = list->data[i].next) {
         if (list->data[i].value.key == key) {
             if (valid != nullptr){
@@ -210,7 +231,30 @@ value_t htable_get(Hash_Table_t *table, key_t key, bool* valid /*= nullptr*/) {
             return list->data[i].value.value;
         }
     }
+
     if (valid != nullptr){
+        *valid = false;
+    }
+    htable_verify(table, VERIFY_CONTEXT);
+    return value_POISON;
+}
+
+value_t htable_remove(Hash_Table_t *table, key_t key, bool* valid /*= nullptr*/) {
+    htable_verify(table, VERIFY_CONTEXT);
+
+    List_t* list = htable_getList(table, key);
+    for (int i = list->head; i != 0; i = list->data[i].next) {
+        if (list->data[i].value.key == key) {
+            int error_code = 0;
+            KV_Pair ret = list_remove(list, i, &error_code);
+            if (valid != nullptr) {
+                *valid = (error_code == 0);
+            }
+            return ret.value;
+        }
+    }
+
+    if (valid != nullptr) {
         *valid = false;
     }
     htable_verify(table, VERIFY_CONTEXT);
